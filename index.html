@@ -3,84 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Escape The Stalker</title>
+    <title>Escape The Stalker: Redux</title>
     <style>
-        :root { --ui-color: rgba(255, 255, 255, 0.6); }
-        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
+        :root { --ui-color: rgba(255, 255, 255, 0.8); --blood: #8b0000; }
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; margin: 0; padding: 0; }
+        body, html { width: 100%; height: 100%; background-color: #050505; overflow: hidden; font-family: 'Courier New', Courier, monospace; }
         canvas { display: block; width: 100%; height: 100%; }
         
         /* UI Overlay */
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; z-index: 5; }
         
         /* Top HUD */
-        #hud { padding: 15px; display: flex; justify-content: space-between; align-items: flex-start; }
-        #inventory { display: flex; gap: 10px; }
-        .inv-slot { width: 40px; height: 40px; border: 2px solid var(--ui-color); border-radius: 5px; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; font-size: 24px; }
-        #status-msg { color: #fff; font-size: 16px; text-shadow: 1px 1px 2px #000; background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; opacity: 0; transition: opacity 0.3s; }
+        #hud { padding: 15px; display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
+        #inventory-container { display: flex; flex-direction: column; gap: 5px; }
+        .inv-slot { width: 45px; height: 45px; border: 2px solid var(--ui-color); border-radius: 8px; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; font-size: 24px; box-shadow: 0 0 10px rgba(0,0,0,0.8); }
+        #stamina-bar-container { width: 150px; height: 15px; border: 2px solid var(--ui-color); border-radius: 10px; background: rgba(0,0,0,0.5); overflow: hidden; margin-top: 10px; }
+        #stamina-bar { width: 100%; height: 100%; background: #2ecc71; transition: width 0.1s linear, background-color 0.3s; }
+        #status-msg { color: #fff; font-size: 16px; font-weight: bold; text-shadow: 2px 2px 4px #000; background: rgba(0,0,0,0.7); padding: 8px 15px; border-radius: 5px; opacity: 0; transition: opacity 0.3s; border-left: 4px solid var(--ui-color); }
         
         /* Mobile Controls */
-        #controls { padding: 20px; display: flex; justify-content: space-between; align-items: flex-end; height: 150px; pointer-events: auto; }
-        #joystick-zone { width: 150px; height: 150px; position: relative; }
-        #joystick-base { width: 120px; height: 120px; border: 2px solid var(--ui-color); border-radius: 50%; position: absolute; bottom: 0; left: 0; background: rgba(255,255,255,0.1); display: none; }
-        #joystick-stick { width: 50px; height: 50px; background: var(--ui-color); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
-        #action-btn { width: 80px; height: 80px; background: rgba(255, 255, 255, 0.2); border: 2px solid var(--ui-color); border-radius: 50%; color: #fff; font-weight: bold; display: flex; justify-content: center; align-items: center; font-size: 12px; text-align: center; }
-        #action-btn:active { background: rgba(255, 255, 255, 0.5); }
+        #controls { padding: 20px; display: flex; justify-content: space-between; align-items: flex-end; height: 180px; pointer-events: auto; width: 100%; }
+        #joystick-zone { width: 160px; height: 160px; position: relative; border-radius: 50%; }
+        #joystick-base { width: 120px; height: 120px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; position: absolute; bottom: 10px; left: 10px; background: rgba(255,255,255,0.05); display: none; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); }
+        #joystick-stick { width: 50px; height: 50px; background: rgba(255,255,255,0.7); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+        
+        .action-buttons { display: flex; gap: 15px; }
+        .btn { width: 70px; height: 70px; background: rgba(20, 20, 20, 0.7); border: 2px solid var(--ui-color); border-radius: 50%; color: #fff; font-weight: bold; display: flex; justify-content: center; align-items: center; font-size: 11px; text-align: center; box-shadow: 0 0 15px rgba(0,0,0,0.8); text-transform: uppercase; }
+        .btn:active { background: rgba(255, 255, 255, 0.3); transform: scale(0.95); }
+        #btn-sprint { border-color: #2ecc71; }
 
         /* Screens */
-        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 10; pointer-events: auto; }
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 10; pointer-events: auto; }
         .hidden { display: none !important; }
-        h1 { font-size: 40px; margin-bottom: 10px; color: #8b0000; text-shadow: 2px 2px 0 #000; }
-        p { text-align: center; max-width: 80%; line-height: 1.5; color: #ccc; }
-        button.menu-btn { padding: 15px 40px; font-size: 20px; font-family: inherit; background: #8b0000; color: #fff; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; text-transform: uppercase; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
-        button.menu-btn:active { background: #600000; transform: translateY(2px); }
-        #win-screen h1 { color: #d4af37; }
-        #win-screen button { background: #d4af37; color: #000; }
+        h1 { font-size: 45px; margin-bottom: 15px; color: var(--blood); text-shadow: 3px 3px 0 #000, 0 0 20px rgba(139,0,0,0.5); text-align: center; }
+        p { text-align: center; max-width: 600px; width: 85%; line-height: 1.6; color: #ddd; font-size: 16px; background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; border: 1px solid #333; }
+        button.menu-btn { padding: 15px 50px; font-size: 22px; font-family: inherit; background: var(--blood); color: #fff; border: 2px solid #500; border-radius: 8px; cursor: pointer; margin-top: 30px; text-transform: uppercase; font-weight: bold; box-shadow: 0 6px 15px rgba(0,0,0,0.7); transition: all 0.2s; }
+        button.menu-btn:active { background: #500000; transform: translateY(4px); box-shadow: 0 2px 5px rgba(0,0,0,0.7); }
+        #win-screen h1 { color: #d4af37; text-shadow: 0 0 20px rgba(212,175,55,0.5); }
+        #win-screen button { background: #d4af37; color: #000; border-color: #aa8c2c; }
+        
+        /* Threat overlay */
+        #threat-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; box-shadow: inset 0 0 150px rgba(139,0,0,0); pointer-events: none; transition: box-shadow 0.2s; z-index: 4; }
     </style>
 </head>
 <body>
 
     <canvas id="gameCanvas"></canvas>
+    <div id="threat-overlay"></div>
 
     <div id="ui-layer">
         <div id="hud">
-            <div id="inventory">
-                <div class="inv-slot" id="slot-1"></div>
+            <div id="inventory-container">
+                <div style="display:flex; gap:10px;">
+                    <div class="inv-slot" id="slot-1"></div>
+                    <div class="inv-slot" id="slot-2"></div>
+                </div>
+                <div id="stamina-bar-container"><div id="stamina-bar"></div></div>
             </div>
-            <div id="status-msg">Find the exit...</div>
+            <div id="status-msg">Escape the Manor...</div>
         </div>
         <div id="controls" class="hidden">
             <div id="joystick-zone">
                 <div id="joystick-base"><div id="joystick-stick"></div></div>
             </div>
-            <div id="action-btn">INTERACT</div>
+            <div class="action-buttons">
+                <div id="btn-sprint" class="btn">SPRINT</div>
+                <div id="btn-action" class="btn">INTERACT</div>
+            </div>
         </div>
     </div>
 
     <div id="start-screen" class="screen">
-        <h1>THE MANOR</h1>
-        <p>You are trapped. Find the silver key to unlock the main door and escape.<br><br>Beware the Stalker. If you hear the heartbeat, hide in a blue wardrobe.<br><br>Use the left side of the screen to move, right button to interact.</p>
-        <button class="menu-btn" onclick="startGame()">Enter</button>
+        <h1>THE STALKER</h1>
+        <p>
+            <strong>OBJECTIVE:</strong><br>
+            1. Find the <b>Silver Key</b> to unlock the inner door.<br>
+            2. Find the <b>Main Key</b> to unlock the EXIT.<br><br>
+            <strong>SURVIVAL:</strong><br>
+            Use the Left side of screen to move. Use right buttons to interact or sprint. <br>If your screen pulses red, HE IS NEAR. Hide inside the blue wardrobes to survive.
+        </p>
+        <button class="menu-btn" onclick="startGame()">ENTER MANOR</button>
     </div>
 
     <div id="game-over-screen" class="screen hidden">
-        <h1>CAUGHT</h1>
-        <p>You did not survive the night.</p>
-        <button class="menu-btn" onclick="location.reload()">Try Again</button>
+        <h1>YOU WERE CAUGHT</h1>
+        <p>The manor claims another soul.</p>
+        <button class="menu-btn" onclick="location.reload()">TRY AGAIN</button>
     </div>
 
     <div id="win-screen" class="screen hidden">
         <h1>ESCAPED</h1>
         <p>You made it out alive.</p>
-        <button class="menu-btn" onclick="location.reload()">Play Again</button>
+        <button class="menu-btn" onclick="location.reload()">PLAY AGAIN</button>
     </div>
 
 <script>
 /**
- * ENGINE & STATE SETUP
+ * ENGINE SETUP
  */
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d', { alpha: false }); // Optimize performance
 let cw = canvas.width = window.innerWidth;
 let ch = canvas.height = window.innerHeight;
 
@@ -89,58 +111,60 @@ window.addEventListener('resize', () => {
     ch = canvas.height = window.innerHeight;
 });
 
-// Game Constants
-const TILE_SIZE = 64;
+const TILE_SIZE = 72;
 const FPS = 60;
 const MS_PER_FRAME = 1000 / FPS;
 
-// Game State
 const State = {
-    keys: { w: false, a: false, s: false, d: false },
-    touch: { active: false, x: 0, y: 0, dx: 0, dy: 0 },
+    keys: { w: false, a: false, s: false, d: false, shift: false },
+    touch: { active: false, x: 0, y: 0, dx: 0, dy: 0, sprinting: false },
     playing: false,
     inventory: [],
     lastTime: 0,
-    accumulator: 0
+    accumulator: 0,
+    shake: 0,
+    globalPulse: 0
 };
 
 /**
  * MAP DESIGN
- * 0: Floor, 1: Wall, 2: Locked Door, 3: Exit Door, 4: Hiding Spot (Wardrobe), 5: Key Spawn
+ * 0: Floor, 1: Wall, 2: Locked Door (Needs Silver Key), 3: Exit Door (Needs Main Key), 
+ * 4: Wardrobe (Hide), 5: Spawn Silver Key, 6: Spawn Main Key
  */
 const mapGrid = [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,5,0,0,1,0,0,0,4,1,0,0,0,0,1,4,0,0,5,1],
+    [1,0,0,0,1,6,0,0,4,1,0,0,0,0,1,4,0,0,0,1],
     [1,0,4,0,1,0,1,1,0,1,0,1,1,0,1,0,1,1,0,1],
-    [1,0,0,0,2,0,1,5,0,2,0,1,0,0,1,0,0,1,0,1],
-    [1,1,1,1,1,0,1,1,1,1,0,1,0,0,1,1,2,1,1,1],
+    [1,0,0,0,2,0,1,0,0,1,0,1,0,0,1,0,0,1,0,1],
+    [1,1,1,1,1,0,1,1,0,1,0,1,0,0,1,1,0,1,1,1],
     [1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
     [1,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,1],
     [1,0,1,4,0,0,0,0,0,1,0,0,0,0,0,0,4,1,0,1],
     [1,0,1,0,1,1,1,1,0,1,1,1,1,0,1,1,0,1,0,1],
-    [1,0,2,0,1,5,0,1,0,0,0,0,1,0,1,0,0,2,0,1],
+    [1,0,2,0,1,0,0,1,0,0,0,0,1,0,1,0,0,2,0,1],
     [1,0,1,0,1,1,0,1,1,1,1,0,1,0,1,1,1,1,0,1],
     [1,0,1,0,0,0,0,0,0,4,1,0,0,0,0,0,0,1,0,1],
     [1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1],
-    [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+    [1,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
     [1,1,1,1,1,1,1,1,1,3,1,1,1,1,1,1,1,1,1,1]
 ];
 const mapCols = mapGrid[0].length;
 const mapRows = mapGrid.length;
 
-// Audio System (Procedural)
+// PROCEDURAL AUDIO
 const AudioSys = {
     ctx: null,
     init() {
         window.AudioContext = window.AudioContext || window.webkitAudioContext;
         this.ctx = new AudioContext();
     },
-    playTone(freq, type, duration, vol) {
+    playTone(freq, type, duration, vol, detune=0) {
         if(!this.ctx) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
         osc.type = type;
         osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        osc.detune.setValueAtTime(detune, this.ctx.currentTime);
         gain.gain.setValueAtTime(vol, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
         osc.connect(gain);
@@ -153,23 +177,27 @@ const AudioSys = {
         const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        osc.frequency.setValueAtTime(40, now);
+        osc.frequency.setValueAtTime(45, now);
         osc.frequency.exponentialRampToValueAtTime(20, now + 0.1);
-        gain.gain.setValueAtTime(1, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.3);
+        gain.gain.setValueAtTime(1.5, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.25);
         osc.connect(gain);
         gain.connect(this.ctx.destination);
         osc.start(now);
-        osc.stop(now + 0.3);
+        osc.stop(now + 0.25);
     },
-    playInteract() { this.playTone(600, 'sine', 0.1, 0.5); this.playTone(800, 'sine', 0.2, 0.5); },
-    playDoorLocked() { this.playTone(150, 'square', 0.1, 0.5); },
-    playDoorOpen() { this.playTone(300, 'sawtooth', 0.5, 0.3); },
-    playScare() { this.playTone(100, 'sawtooth', 1.5, 1); this.playTone(800, 'square', 1.5, 0.5); }
+    playInteract() { this.playTone(600, 'sine', 0.1, 0.3); this.playTone(800, 'sine', 0.2, 0.3); },
+    playDoorLocked() { this.playTone(120, 'square', 0.15, 0.4); },
+    playDoorOpen() { this.playTone(250, 'sawtooth', 0.4, 0.2, -200); },
+    playScare() { 
+        this.playTone(100, 'sawtooth', 2.0, 1); 
+        this.playTone(600, 'square', 2.0, 0.8, 50); 
+        this.playTone(800, 'square', 2.0, 0.8, -50); 
+    }
 };
 
 /**
- * MATH & UTILS
+ * UTILITIES
  */
 function dist(x1, y1, x2, y2) { return Math.hypot(x2 - x1, y2 - y1); }
 function showMsg(text) {
@@ -177,7 +205,7 @@ function showMsg(text) {
     el.innerText = text;
     el.style.opacity = 1;
     clearTimeout(el.timeout);
-    el.timeout = setTimeout(() => el.style.opacity = 0, 2000);
+    el.timeout = setTimeout(() => el.style.opacity = 0, 2500);
 }
 
 /**
@@ -186,11 +214,20 @@ function showMsg(text) {
 class Camera {
     constructor() { this.x = 0; this.y = 0; }
     follow(target) {
-        this.x = target.x - cw / 2;
-        this.y = target.y - ch / 2;
-        // Clamp to map bounds
-        this.x = Math.max(0, Math.min(this.x, mapCols * TILE_SIZE - cw));
-        this.y = Math.max(0, Math.min(this.y, mapRows * TILE_SIZE - ch));
+        let targetX = target.x - cw / 2;
+        let targetY = target.y - ch / 2;
+        
+        // Add Screen Shake
+        if (State.shake > 0) {
+            targetX += (Math.random() - 0.5) * State.shake;
+            targetY += (Math.random() - 0.5) * State.shake;
+            State.shake *= 0.9;
+            if (State.shake < 0.5) State.shake = 0;
+        }
+
+        // Clamp
+        this.x = Math.max(0, Math.min(targetX, mapCols * TILE_SIZE - cw));
+        this.y = Math.max(0, Math.min(targetY, mapRows * TILE_SIZE - ch));
     }
 }
 
@@ -198,14 +235,23 @@ class Player {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.size = 20;
-        this.speed = 4;
+        this.size = 16;
+        this.baseSpeed = 3.5;
+        this.sprintSpeed = 6.0;
         this.hidden = false;
         this.color = '#fff';
+        this.stamina = 100;
     }
 
     update() {
-        if (this.hidden) return; // Can't move while hidden
+        if (this.hidden) {
+            this.stamina = Math.min(100, this.stamina + 0.5);
+            this.updateStaminaUI();
+            return; 
+        }
+
+        let isSprinting = (State.keys.shift || State.touch.sprinting) && this.stamina > 0;
+        let currentSpeed = isSprinting ? this.sprintSpeed : this.baseSpeed;
 
         let dx = 0, dy = 0;
         if (State.keys.w) dy -= 1;
@@ -218,35 +264,50 @@ class Player {
             dy = State.touch.dy;
         }
 
-        // Normalize
         const length = Math.hypot(dx, dy);
-        if (length > 0) {
-            dx = (dx / length) * this.speed;
-            dy = (dy / length) * this.speed;
-        }
+        let moving = length > 0.1;
 
-        this.move(dx, dy);
+        if (moving) {
+            dx = (dx / length) * currentSpeed;
+            dy = (dy / length) * currentSpeed;
+            if (isSprinting) {
+                this.stamina = Math.max(0, this.stamina - 1);
+            } else {
+                this.stamina = Math.min(100, this.stamina + 0.2);
+            }
+        } else {
+            this.stamina = Math.min(100, this.stamina + 0.5);
+        }
+        
+        this.updateStaminaUI();
+        if(moving) this.move(dx, dy);
+    }
+    
+    updateStaminaUI() {
+        const bar = document.getElementById('stamina-bar');
+        bar.style.width = this.stamina + '%';
+        if(this.stamina < 30) bar.style.backgroundColor = '#e74c3c';
+        else if(this.stamina < 60) bar.style.backgroundColor = '#f1c40f';
+        else bar.style.backgroundColor = '#2ecc71';
     }
 
     move(dx, dy) {
-        // X collision
         if (!this.checkCollision(this.x + dx, this.y)) this.x += dx;
-        // Y collision
         if (!this.checkCollision(this.x, this.y + dy)) this.y += dy;
     }
 
     checkCollision(nx, ny) {
-        // Check corners of bounding box against map grid
-        const left = Math.floor((nx - this.size/2) / TILE_SIZE);
-        const right = Math.floor((nx + this.size/2) / TILE_SIZE);
-        const top = Math.floor((ny - this.size/2) / TILE_SIZE);
-        const bottom = Math.floor((ny + this.size/2) / TILE_SIZE);
+        const padding = this.size * 0.8;
+        const left = Math.floor((nx - padding) / TILE_SIZE);
+        const right = Math.floor((nx + padding) / TILE_SIZE);
+        const top = Math.floor((ny - padding) / TILE_SIZE);
+        const bottom = Math.floor((ny + padding) / TILE_SIZE);
 
         for (let r = top; r <= bottom; r++) {
             for (let c = left; c <= right; c++) {
                 if (r >= 0 && r < mapRows && c >= 0 && c < mapCols) {
-                    const tile = mapGrid[r][c];
-                    if (tile === 1 || tile === 2 || tile === 3) return true; // Solid walls and doors
+                    const t = mapGrid[r][c];
+                    if (t === 1 || t === 2 || t === 3) return true; // Walls & locked doors
                 }
             }
         }
@@ -259,72 +320,71 @@ class Player {
         ctx.beginPath();
         ctx.arc(this.x - camX, this.y - camY, this.size, 0, Math.PI * 2);
         ctx.fill();
-        // Direction indicator
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 2;
+        
+        // Draw facing line
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(this.x - camX, this.y - camY);
-        const lookX = State.touch.active ? State.touch.dx : (State.keys.a ? -1 : State.keys.d ? 1 : 0);
-        const lookY = State.touch.active ? State.touch.dy : (State.keys.w ? -1 : State.keys.s ? 1 : 0);
-        if (lookX !== 0 || lookY !== 0) {
-            const angle = Math.atan2(lookY, lookX);
-            ctx.lineTo((this.x - camX) + Math.cos(angle)*this.size, (this.y - camY) + Math.sin(angle)*this.size);
-            ctx.stroke();
-        }
+        let lookX = State.touch.active ? State.touch.dx : (State.keys.a ? -1 : State.keys.d ? 1 : 0);
+        let lookY = State.touch.active ? State.touch.dy : (State.keys.w ? -1 : State.keys.s ? 1 : 0);
+        if (lookX === 0 && lookY === 0) { lookY = 1; } // default face down
+        
+        const angle = Math.atan2(lookY, lookX);
+        ctx.lineTo((this.x - camX) + Math.cos(angle)*(this.size+5), (this.y - camY) + Math.sin(angle)*(this.size+5));
+        ctx.stroke();
     }
 
     interact() {
-        // Check items, doors, hiding spots in a small radius
-        const range = TILE_SIZE * 1.5;
+        const range = TILE_SIZE * 1.2;
         const c = Math.floor(this.x / TILE_SIZE);
         const r = Math.floor(this.y / TILE_SIZE);
 
-        // Check hiding spots (Tile 4)
         if (mapGrid[r][c] === 4) {
             this.hidden = !this.hidden;
-            showMsg(this.hidden ? "Hidden in wardrobe." : "Left wardrobe.");
+            showMsg(this.hidden ? "Hiding in Wardrobe" : "Left Wardrobe");
             AudioSys.playInteract();
             return;
         }
         
-        if (this.hidden) return; // Can't interact with other things while hidden
+        if (this.hidden) return;
 
-        // Check objects on map (doors/exit)
-        const neighbors = [
-            {r: r-1, c: c}, {r: r+1, c: c}, {r: r, c: c-1}, {r: r, c: c+1}
-        ];
-
+        const neighbors = [ {r:r-1, c}, {r:r+1, c}, {r, c:c-1}, {r, c:c+1} ];
         for (let n of neighbors) {
             if (n.r >= 0 && n.r < mapRows && n.c >= 0 && n.c < mapCols) {
                 const tile = mapGrid[n.r][n.c];
-                if (tile === 2) { // Locked door
+                if (tile === 2) {
                     if (State.inventory.includes('Silver Key')) {
-                        mapGrid[n.r][n.c] = 0; // Open door
+                        mapGrid[n.r][n.c] = 0;
                         AudioSys.playDoorOpen();
-                        showMsg("Door unlocked!");
+                        showMsg("Inner Door Unlocked!");
                     } else {
                         AudioSys.playDoorLocked();
-                        showMsg("Locked. Need Silver Key.");
+                        showMsg("Locked. Find the Silver Key.");
                     }
                     return;
-                } else if (tile === 3) { // Exit door
+                } else if (tile === 3) {
                     if (State.inventory.includes('Main Key')) {
                         winGame();
                     } else {
                         AudioSys.playDoorLocked();
-                        showMsg("Locked. Need Main Key.");
+                        showMsg("Locked. Find the Main Key.");
                     }
                     return;
                 }
             }
         }
 
-        // Check items
         for (let i = items.length - 1; i >= 0; i--) {
             if (dist(this.x, this.y, items[i].x, items[i].y) < range) {
-                State.inventory.push(items[i].name);
-                document.getElementById('slot-1').innerText = items[i].icon;
-                showMsg("Picked up " + items[i].name);
+                const item = items[i];
+                State.inventory.push(item.name);
+                
+                // Update UI slots
+                if(!document.getElementById('slot-1').innerText) document.getElementById('slot-1').innerText = item.icon;
+                else document.getElementById('slot-2').innerText = item.icon;
+                
+                showMsg("Picked up " + item.name);
                 AudioSys.playInteract();
                 items.splice(i, 1);
                 return;
@@ -335,58 +395,66 @@ class Player {
 
 class Enemy {
     constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.size = 22;
-        this.speed = 2.8;
-        this.color = '#8b0000'; // Blood red
+        this.x = x; this.y = y;
+        this.size = 20;
+        this.baseSpeed = 2.0; // Slower than player base speed
+        this.chaseSpeed = 3.8; // Faster than player base, slower than sprint
+        this.color = '#aa0000';
         this.path = [];
-        this.state = 'patrol'; // patrol, chase
+        this.state = 'patrol';
         this.lastHeartbeat = 0;
+        this.targetNode = null;
     }
 
     update() {
         const d = dist(this.x, this.y, player.x, player.y);
+        const overlay = document.getElementById('threat-overlay');
         
-        // Audio Heartbeat based on distance
-        if (d < TILE_SIZE * 8 && !player.hidden) {
-            const beatInterval = Math.max(0.3, d / (TILE_SIZE * 8)); // Faster when closer
+        // Heartbeat & Threat UI
+        if (d < TILE_SIZE * 7 && !player.hidden) {
+            let intensity = Math.max(0, 1 - (d / (TILE_SIZE * 7)));
+            overlay.style.boxShadow = `inset 0 0 ${100 + intensity * 150}px rgba(139,0,0,${intensity * 0.7})`;
+            
+            const beatInterval = Math.max(0.25, d / (TILE_SIZE * 6));
             const now = performance.now() / 1000;
             if (now - this.lastHeartbeat > beatInterval) {
                 AudioSys.heartbeat();
                 this.lastHeartbeat = now;
             }
+        } else {
+            overlay.style.boxShadow = `inset 0 0 0px rgba(139,0,0,0)`;
         }
 
-        // Catch condition
+        // Catch logic
         if (d < this.size + player.size && !player.hidden) {
             loseGame();
             return;
         }
 
-        // AI Logic
+        // Logic
+        let speed = this.baseSpeed;
         if (!player.hidden && this.hasLineOfSight(player.x, player.y) && d < TILE_SIZE * 6) {
+            if(this.state !== 'chase') State.shake = 10; // Spook effect when spotted
             this.state = 'chase';
-            // Move directly towards player
+            speed = this.chaseSpeed;
             const angle = Math.atan2(player.y - this.y, player.x - this.x);
-            this.move(Math.cos(angle) * this.speed, Math.sin(angle) * this.speed);
+            this.move(Math.cos(angle) * speed, Math.sin(angle) * speed);
         } else {
             this.state = 'patrol';
-            // Simple grid-based movement
-            if (this.path.length === 0) {
-                this.getNewPatrolTarget();
-            } else {
-                const target = this.path[0];
-                const tx = target.c * TILE_SIZE + TILE_SIZE / 2;
-                const ty = target.r * TILE_SIZE + TILE_SIZE / 2;
+            speed = this.baseSpeed;
+            if (!this.targetNode) this.getNewPatrolTarget();
+            
+            if (this.targetNode) {
+                const tx = this.targetNode.x;
+                const ty = this.targetNode.y;
                 const pd = dist(this.x, this.y, tx, ty);
                 
-                if (pd < this.speed) {
+                if (pd < speed) {
                     this.x = tx; this.y = ty;
-                    this.path.shift();
+                    this.targetNode = null; // Reached node, get new
                 } else {
                     const angle = Math.atan2(ty - this.y, tx - this.x);
-                    this.move(Math.cos(angle) * (this.speed * 0.6), Math.sin(angle) * (this.speed * 0.6));
+                    this.move(Math.cos(angle) * speed, Math.sin(angle) * speed);
                 }
             }
         }
@@ -394,18 +462,23 @@ class Enemy {
 
     move(dx, dy) {
         if (!this.checkCollision(this.x + dx, this.y)) this.x += dx;
+        else this.targetNode = null; // Recalculate if stuck
+        
         if (!this.checkCollision(this.x, this.y + dy)) this.y += dy;
+        else this.targetNode = null;
     }
 
     checkCollision(nx, ny) {
-        const left = Math.floor((nx - this.size/2) / TILE_SIZE);
-        const right = Math.floor((nx + this.size/2) / TILE_SIZE);
-        const top = Math.floor((ny - this.size/2) / TILE_SIZE);
-        const bottom = Math.floor((ny + this.size/2) / TILE_SIZE);
+        const padding = this.size * 0.8;
+        const left = Math.floor((nx - padding) / TILE_SIZE);
+        const right = Math.floor((nx + padding) / TILE_SIZE);
+        const top = Math.floor((ny - padding) / TILE_SIZE);
+        const bottom = Math.floor((ny + padding) / TILE_SIZE);
         for (let r = top; r <= bottom; r++) {
             for (let c = left; c <= right; c++) {
                 if (r >= 0 && r < mapRows && c >= 0 && c < mapCols) {
-                    if (mapGrid[r][c] === 1 || mapGrid[r][c] === 2 || mapGrid[r][c] === 3) return true;
+                    const t = mapGrid[r][c];
+                    if (t === 1 || t === 2 || t === 3) return true;
                 }
             }
         }
@@ -413,33 +486,32 @@ class Enemy {
     }
 
     hasLineOfSight(px, py) {
-        // Simple DDA Raycasting for Line of Sight
         let x0 = this.x, y0 = this.y;
-        let x1 = px, y1 = py;
-        let dx = x1 - x0, dy = y1 - y0;
-        let steps = Math.max(Math.abs(dx), Math.abs(dy)) / 10;
+        let dx = px - x0, dy = py - y0;
+        let dist = Math.hypot(dx, dy);
+        let steps = dist / 15;
         let xInc = dx / steps, yInc = dy / steps;
         let x = x0, y = y0;
 
         for (let i = 0; i < steps; i++) {
             let c = Math.floor(x / TILE_SIZE);
             let r = Math.floor(y / TILE_SIZE);
-            if (mapGrid[r] && (mapGrid[r][c] === 1 || mapGrid[r][c] === 2)) return false;
+            if (mapGrid[r] && (mapGrid[r][c] === 1 || mapGrid[r][c] === 2 || mapGrid[r][c] === 3)) return false;
             x += xInc; y += yInc;
         }
         return true;
     }
 
     getNewPatrolTarget() {
-        // Pick a random open floor tile
         let r, c;
+        let tries = 0;
         do {
             r = Math.floor(Math.random() * mapRows);
             c = Math.floor(Math.random() * mapCols);
-        } while (mapGrid[r][c] !== 0);
+            tries++;
+        } while ((mapGrid[r][c] !== 0) && tries < 50);
         
-        // Simple direct line fake pathing for brevity
-        this.path = [{r, c}];
+        this.targetNode = { x: c * TILE_SIZE + TILE_SIZE/2, y: r * TILE_SIZE + TILE_SIZE/2 };
     }
 
     draw(ctx, camX, camY) {
@@ -447,60 +519,61 @@ class Enemy {
         ctx.beginPath();
         ctx.arc(this.x - camX, this.y - camY, this.size, 0, Math.PI * 2);
         ctx.fill();
+        
+        // Eyes
+        ctx.fillStyle = '#ff0000';
+        ctx.beginPath(); ctx.arc(this.x - camX - 6, this.y - camY - 4, 3, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(this.x - camX + 6, this.y - camY - 4, 3, 0, Math.PI*2); ctx.fill();
     }
 }
 
 class Item {
-    constructor(x, y, name, icon) {
-        this.x = x; this.y = y; this.name = name; this.icon = icon;
+    constructor(x, y, name, icon, color) {
+        this.x = x; this.y = y; this.name = name; this.icon = icon; this.color = color;
+        this.offsetY = 0;
     }
     draw(ctx, camX, camY) {
-        ctx.font = '24px Arial';
-        ctx.fillText(this.icon, this.x - camX - 12, this.y - camY + 8);
+        this.offsetY = Math.sin(State.globalPulse * 0.05) * 5; // Hover effect
+        
+        // Glow effect
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = this.color;
+        ctx.font = '28px Arial';
+        ctx.fillText(this.icon, this.x - camX - 14, this.y - camY + 10 + this.offsetY);
+        ctx.shadowBlur = 0; // reset
     }
 }
 
-// Global Entities
 let player, enemy, camera, items = [];
 
 /**
- * INITIALIZATION
+ * INIT & RENDER
  */
 function initWorld() {
     items = [];
-    let keySpawns = [];
+    let silverSpawn = null;
+    let mainSpawn = null;
     
-    // Parse map to instantiate entities
     for (let r = 0; r < mapRows; r++) {
         for (let c = 0; c < mapCols; c++) {
             const x = c * TILE_SIZE + TILE_SIZE / 2;
             const y = r * TILE_SIZE + TILE_SIZE / 2;
-            if (mapGrid[r][c] === 5) {
-                keySpawns.push({x, y});
-                mapGrid[r][c] = 0; // turn back to floor
-            }
+            if (mapGrid[r][c] === 5) { silverSpawn = {x,y}; mapGrid[r][c] = 0; }
+            if (mapGrid[r][c] === 6) { mainSpawn = {x,y}; mapGrid[r][c] = 0; }
         }
     }
 
-    // Spawn player safely
-    player = new Player(TILE_SIZE * 1.5, TILE_SIZE * 1.5);
+    // Player starts near bottom left safe zone
+    player = new Player(TILE_SIZE * 1.5, TILE_SIZE * 13.5);
     camera = new Camera();
     
-    // Spawn enemy far away
-    enemy = new Enemy(TILE_SIZE * (mapCols - 2), TILE_SIZE * (mapRows - 2));
+    // Enemy starts top right
+    enemy = new Enemy(TILE_SIZE * (mapCols - 2), TILE_SIZE * 1.5);
 
-    // Spawn Keys randomly
-    if(keySpawns.length >= 2) {
-        // Shuffle spawns
-        keySpawns.sort(() => Math.random() - 0.5);
-        items.push(new Item(keySpawns[0].x, keySpawns[0].y, 'Silver Key', '🗝️'));
-        items.push(new Item(keySpawns[1].x, keySpawns[1].y, 'Main Key', '🔑'));
-    }
+    if(silverSpawn) items.push(new Item(silverSpawn.x, silverSpawn.y, 'Silver Key', '🗝️', '#cccccc'));
+    if(mainSpawn) items.push(new Item(mainSpawn.x, mainSpawn.y, 'Main Key', '🔑', '#ffd700'));
 }
 
-/**
- * RENDER PIPELINE
- */
 function drawMap(camX, camY) {
     const startCol = Math.max(0, Math.floor(camX / TILE_SIZE));
     const endCol = Math.min(mapCols, Math.ceil((camX + cw) / TILE_SIZE));
@@ -514,63 +587,64 @@ function drawMap(camX, camY) {
             const y = r * TILE_SIZE - camY;
 
             if (tile === 1) { // Wall
-                ctx.fillStyle = '#222';
+                ctx.fillStyle = '#111';
                 ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                ctx.strokeStyle = '#111';
+                // Fake 3D inner shadow
+                ctx.fillStyle = '#0a0a0a';
+                ctx.fillRect(x + 5, y + 5, TILE_SIZE - 10, TILE_SIZE - 10);
+            } else if (tile === 0) { // Floor
+                ctx.fillStyle = '#2a2420'; 
+                ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                ctx.strokeStyle = '#1e1a17';
+                ctx.lineWidth = 2;
                 ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
-            } else if (tile === 0 || tile === 5) { // Floor
-                ctx.fillStyle = '#4a3f35'; // Wood floor tone
-                ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                // Planks texture
-                ctx.strokeStyle = '#3a2f25';
-                ctx.beginPath();
-                ctx.moveTo(x, y + TILE_SIZE/3); ctx.lineTo(x + TILE_SIZE, y + TILE_SIZE/3);
-                ctx.moveTo(x, y + TILE_SIZE*0.66); ctx.lineTo(x + TILE_SIZE, y + TILE_SIZE*0.66);
-                ctx.stroke();
-            } else if (tile === 2) { // Interior Door
-                ctx.fillStyle = '#654321';
-                ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                ctx.fillStyle = '#000';
-                ctx.beginPath(); ctx.arc(x + TILE_SIZE - 15, y + TILE_SIZE/2, 5, 0, Math.PI*2); ctx.fill(); // knob
-            } else if (tile === 3) { // Exit Door
-                ctx.fillStyle = '#b22222';
-                ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                ctx.fillStyle = 'gold';
-                ctx.font = '20px Arial'; ctx.fillText('EXIT', x + 10, y + 35);
-            } else if (tile === 4) { // Wardrobe/Hide spot
+            } else if (tile === 2) { // Interior Door (Silver)
                 ctx.fillStyle = '#4a3f35';
                 ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-                ctx.fillStyle = '#2c3e50'; // blueish wardrobe
-                ctx.fillRect(x + 5, y + 5, TILE_SIZE - 10, TILE_SIZE - 10);
+                ctx.fillStyle = '#ccc'; // silver lock
+                ctx.beginPath(); ctx.arc(x + TILE_SIZE/2, y + TILE_SIZE/2, 8, 0, Math.PI*2); ctx.fill(); 
+            } else if (tile === 3) { // Exit Door (Gold)
+                ctx.fillStyle = '#6b1111';
+                ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                ctx.fillStyle = 'gold';
+                ctx.font = 'bold 22px Arial'; ctx.fillText('EXIT', x + 10, y + TILE_SIZE/2 + 8);
+            } else if (tile === 4) { // Wardrobe
+                ctx.fillStyle = '#2a2420'; ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+                ctx.fillStyle = '#1e3750'; // Dark Blue
+                ctx.fillRect(x + 8, y + 8, TILE_SIZE - 16, TILE_SIZE - 16);
+                ctx.fillStyle = '#112233'; // Inner split
+                ctx.fillRect(x + TILE_SIZE/2 - 2, y + 8, 4, TILE_SIZE - 16);
             }
         }
     }
 }
 
 function drawLighting(camX, camY) {
-    if (player.hidden) return; // Full dark if hidden
+    if (player.hidden) {
+        ctx.fillStyle = 'rgba(0, 0, 5, 0.95)';
+        ctx.fillRect(0, 0, cw, ch);
+        return;
+    }
 
-    // Draw dark overlay
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+    // Base semi-transparent darkness (NOT pitch black)
+    ctx.fillStyle = 'rgba(5, 5, 12, 0.88)';
     ctx.fillRect(0, 0, cw, ch);
 
-    // Cut out light circle
+    // Render Flashlight beam (cuts out the darkness using screen blending trick or standard composite)
     ctx.globalCompositeOperation = 'destination-out';
     const gradient = ctx.createRadialGradient(
-        player.x - camX, player.y - camY, 20, 
-        player.x - camX, player.y - camY, TILE_SIZE * 4
+        player.x - camX, player.y - camY, TILE_SIZE * 0.5, 
+        player.x - camX, player.y - camY, TILE_SIZE * 5
     );
-    gradient.addColorStop(0, 'rgba(0,0,0,1)');
-    gradient.addColorStop(0.5, 'rgba(0,0,0,0.8)');
-    gradient.addColorStop(1, 'rgba(0,0,0,0)');
+    gradient.addColorStop(0, 'rgba(0,0,0,1)');      // Fully transparent center
+    gradient.addColorStop(0.5, 'rgba(0,0,0,0.7)');
+    gradient.addColorStop(1, 'rgba(0,0,0,0)');      // Blends back into dark
 
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.arc(player.x - camX, player.y - camY, TILE_SIZE * 4, 0, Math.PI * 2);
+    ctx.arc(player.x - camX, player.y - camY, TILE_SIZE * 5, 0, Math.PI * 2);
     ctx.fill();
-
-    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalCompositeOperation = 'source-over'; // Reset
 }
 
 /**
@@ -578,6 +652,7 @@ function drawLighting(camX, camY) {
  */
 function update() {
     if (!State.playing) return;
+    State.globalPulse++;
     player.update();
     enemy.update();
     camera.follow(player);
@@ -586,7 +661,7 @@ function update() {
 function draw() {
     if (!State.playing) return;
     
-    // Clear screen
+    // Clear back buffer
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, cw, ch);
 
@@ -594,12 +669,10 @@ function draw() {
     const cy = camera.y;
 
     drawMap(cx, cy);
-    
     items.forEach(item => item.draw(ctx, cx, cy));
-    
     enemy.draw(ctx, cx, cy);
     player.draw(ctx, cx, cy);
-
+    
     drawLighting(cx, cy);
 }
 
@@ -609,7 +682,6 @@ function loop(timestamp) {
     State.lastTime = timestamp;
 
     State.accumulator += deltaTime;
-
     while (State.accumulator >= MS_PER_FRAME) {
         update();
         State.accumulator -= MS_PER_FRAME;
@@ -619,9 +691,6 @@ function loop(timestamp) {
     requestAnimationFrame(loop);
 }
 
-/**
- * GAME STATE MANAGEMENT
- */
 function startGame() {
     AudioSys.init();
     document.getElementById('start-screen').classList.add('hidden');
@@ -637,45 +706,40 @@ function loseGame() {
     AudioSys.playScare();
     document.getElementById('controls').classList.add('hidden');
     document.getElementById('game-over-screen').classList.remove('hidden');
-    
-    // Red flash effect
-    ctx.fillStyle = 'rgba(255,0,0,0.5)';
-    ctx.fillRect(0, 0, cw, ch);
+    document.getElementById('threat-overlay').style.boxShadow = 'none';
 }
 
 function winGame() {
     State.playing = false;
     document.getElementById('controls').classList.add('hidden');
     document.getElementById('win-screen').classList.remove('hidden');
+    document.getElementById('threat-overlay').style.boxShadow = 'none';
 }
 
 /**
- * INPUT HANDLING
+ * CONTROLS
  */
-// Keyboard
+// Keyboard WASD + Shift
 window.addEventListener('keydown', (e) => {
-    if(e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') State.keys.w = true;
-    if(e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') State.keys.s = true;
-    if(e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') State.keys.a = true;
-    if(e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') State.keys.d = true;
-    if(e.key === 'e' || e.key === 'E' || e.key === ' ') {
-        if(State.playing) player.interact();
-    }
+    if(e.key.toLowerCase() === 'w' || e.key === 'ArrowUp') State.keys.w = true;
+    if(e.key.toLowerCase() === 's' || e.key === 'ArrowDown') State.keys.s = true;
+    if(e.key.toLowerCase() === 'a' || e.key === 'ArrowLeft') State.keys.a = true;
+    if(e.key.toLowerCase() === 'd' || e.key === 'ArrowRight') State.keys.d = true;
+    if(e.key === 'Shift') State.keys.shift = true;
+    if(e.key.toLowerCase() === 'e' || e.key === ' ') { if(State.playing) player.interact(); }
 });
-
 window.addEventListener('keyup', (e) => {
-    if(e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') State.keys.w = false;
-    if(e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') State.keys.s = false;
-    if(e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') State.keys.a = false;
-    if(e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') State.keys.d = false;
+    if(e.key.toLowerCase() === 'w' || e.key === 'ArrowUp') State.keys.w = false;
+    if(e.key.toLowerCase() === 's' || e.key === 'ArrowDown') State.keys.s = false;
+    if(e.key.toLowerCase() === 'a' || e.key === 'ArrowLeft') State.keys.a = false;
+    if(e.key.toLowerCase() === 'd' || e.key === 'ArrowRight') State.keys.d = false;
+    if(e.key === 'Shift') State.keys.shift = false;
 });
 
-// Mobile Touch Controls
+// Mobile Touch
 const joystickZone = document.getElementById('joystick-zone');
 const joystickBase = document.getElementById('joystick-base');
 const joystickStick = document.getElementById('joystick-stick');
-const actionBtn = document.getElementById('action-btn');
-
 let touchId = null;
 
 joystickZone.addEventListener('touchstart', (e) => {
@@ -683,7 +747,6 @@ joystickZone.addEventListener('touchstart', (e) => {
     if (touchId !== null) return;
     const touch = e.changedTouches[0];
     touchId = touch.identifier;
-    
     const rect = joystickZone.getBoundingClientRect();
     State.touch.x = touch.clientX - rect.left;
     State.touch.y = touch.clientY - rect.top;
@@ -691,7 +754,6 @@ joystickZone.addEventListener('touchstart', (e) => {
     joystickBase.style.display = 'block';
     joystickBase.style.left = `${State.touch.x - 60}px`;
     joystickBase.style.bottom = `${rect.height - State.touch.y - 60}px`;
-    
     updateJoystick(touch.clientX, touch.clientY, rect);
 }, {passive: false});
 
@@ -713,8 +775,7 @@ function stopJoystick(e) {
             joystickBase.style.display = 'none';
             joystickStick.style.transform = `translate(-50%, -50%)`;
             State.touch.active = false;
-            State.touch.dx = 0;
-            State.touch.dy = 0;
+            State.touch.dx = 0; State.touch.dy = 0;
             break;
         }
     }
@@ -728,32 +789,34 @@ function updateJoystick(clientX, clientY, rect) {
     let dx = cx - State.touch.x;
     let dy = cy - State.touch.y;
     
-    const maxRadius = 60;
-    const distance = Math.hypot(dx, dy);
+    const maxRadius = 50;
+    const dist = Math.hypot(dx, dy);
     
-    if (distance > maxRadius) {
-        dx = (dx / distance) * maxRadius;
-        dy = (dy / distance) * maxRadius;
+    if (dist > maxRadius) {
+        dx = (dx / dist) * maxRadius;
+        dy = (dy / dist) * maxRadius;
     }
     
     joystickStick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-    
     State.touch.active = true;
     State.touch.dx = dx / maxRadius;
     State.touch.dy = dy / maxRadius;
 }
 
-// Action Button
-actionBtn.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    if(State.playing) player.interact();
-}, {passive: false});
+// Action Buttons
+const btnAction = document.getElementById('btn-action');
+const btnSprint = document.getElementById('btn-sprint');
 
-// Mouse Support for Action Button (Desktop testing)
-actionBtn.addEventListener('mousedown', (e) => {
-    if(State.playing) player.interact();
-});
+btnAction.addEventListener('touchstart', (e) => { e.preventDefault(); if(State.playing) player.interact(); }, {passive: false});
+btnAction.addEventListener('mousedown', (e) => { if(State.playing) player.interact(); });
+
+btnSprint.addEventListener('touchstart', (e) => { e.preventDefault(); State.touch.sprinting = true; }, {passive: false});
+btnSprint.addEventListener('touchend', (e) => { e.preventDefault(); State.touch.sprinting = false; }, {passive: false});
+btnSprint.addEventListener('mousedown', (e) => { State.touch.sprinting = true; });
+btnSprint.addEventListener('mouseup', (e) => { State.touch.sprinting = false; });
+btnSprint.addEventListener('mouseleave', (e) => { State.touch.sprinting = false; });
 
 </script>
 </body>
 </html>
+
